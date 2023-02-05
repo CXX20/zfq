@@ -2,17 +2,51 @@
 #define ZFQ_HEADER_VALUE
 
 #include <cassert>
-#include <type_traits>
+#include <utility>
 
 namespace zfq {
-	template<typename T> concept Typelvl =
-		std::is_empty_v<T> && std::is_trivial_v<T>;
-
 	template<auto t> struct Value {
 		static auto constexpr value = t;
 		constexpr Value() = default;
 		template<typename U, std::enable_if_t<
 				t == U::value, int> = 0> constexpr Value(U) {}
+		template<auto u = t> constexpr Value<!u> operator!() const { return {}; }
+		template<auto u = t> constexpr Value<-u> operator-() const { return {}; }
+		template<auto u = t> constexpr Value<~u> operator~() const { return {}; }
+		template<typename U> constexpr Value<t == U::value> operator==(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t != U::value> operator!=(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t < U::value> operator<(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<(t > U::value)> operator>(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t <= U::value> operator<=(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t >= U::value> operator>=(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t <=> U::value> operator<=>(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t + U::value> operator+(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t - U::value> operator-(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t * U::value> operator*(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t / U::value> operator/(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t % U::value> operator%(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t & U::value> operator&(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t | U::value> operator|(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t ^ U::value> operator^(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<t << U::value> operator<<(U) const
+		{ return {}; }
+		template<typename U> constexpr Value<(t >> U::value)> operator>>(U) const
+		{ return {}; }
 		template<typename U, decltype(U{value})* = nullptr, std::enable_if_t<
 			std::is_convertible_v<U, decltype(t)>, int
 		> = 0> constexpr operator U() const { return U{value}; }
@@ -27,46 +61,6 @@ namespace zfq {
 			return *chars.begin() == '0' && chars.size() != 1 ? throw : i;
 		}()>;
 	}
-	template<auto t> constexpr Value<!t> operator!(Value<t>) { return {}; }
-	template<auto t> constexpr Value<-t> operator-(Value<t>) { return {}; }
-	template<auto t> constexpr Value<~t> operator~(Value<t>) { return {}; }
-	template<auto t, typename U> constexpr auto operator==(Value<t>, U)
-	-> Value<t == U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator!=(Value<t>, U)
-	-> Value<t != U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator<(Value<t>, U)
-	-> Value<t < U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator>(Value<t>, U)
-	-> Value<(t > U::value)> { return {}; }
-	template<auto t, typename U> constexpr auto operator<=(Value<t>, U)
-	-> Value<t <= U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator>=(Value<t>, U)
-	-> Value<t >= U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator<=>(Value<t>, U)
-	-> Value<t <=> U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator+(Value<t>, U)
-	-> Value<t + U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator-(Value<t>, U)
-	-> Value<t - U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator*(Value<t>, U)
-	-> Value<t * U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator/(Value<t>, U)
-	-> Value<t / U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator%(Value<t>, U)
-	-> Value<t % U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator&(Value<t>, U)
-	-> Value<t & U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator|(Value<t>, U)
-	-> Value<t | U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator^(Value<t>, U)
-	-> Value<t ^ U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator<<(Value<t>, U)
-	-> Value<t << U::value> { return {}; }
-	template<auto t, typename U> constexpr auto operator>>(Value<t>, U)
-	-> Value<(t >> U::value)> { return {}; }
-	template<typename T> constexpr void assert_(T const& t)
-	{ std::is_constant_evaluated() && !t ? throw : assert(t); }
-	template<auto t> constexpr void assert_(Value<t>) { static_assert(t); }
 }
 
 #endif

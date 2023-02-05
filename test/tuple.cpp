@@ -19,10 +19,6 @@ namespace {
 	static_assert(Tuple3::typeof(0_c) == type<int>);
 	static_assert(Tuple3::typeof(1_c) == type<double>);
 	static_assert(Tuple3::typeof(2_c) == type<unsigned>);
-	static_assert(Tuple3::indexof(std::type_identity<int>{}) == 0_c);
-	static_assert(Tuple3::indexof(type<int>) == 0_c);
-	static_assert(Tuple3::indexof(type<double>) == 1_c);
-	static_assert(Tuple3::indexof(type<unsigned>) == 2_c);
 
 	static_assert(std::is_same_v<
 			zfq::Decltype<Tuple<type<int const&>>::typeof(0_c)>, int const&>);
@@ -33,6 +29,12 @@ namespace {
 	static_assert((Tuple{1_c, 2_c} == Tuple{1_c, 2_c}).value);
 	static_assert((Tuple{1_c, 2_c} != Tuple{1_c, 3_c}).value);
 
+	auto constexpr is_tuplish = []<typename T>(T const&)
+	{ return requires { sizeof(std::tuple_size<T>); }; };
+	static_assert(is_tuplish(Tuple{1, 2., 3u}));
+	static_assert(!is_tuplish(42));
+	static_assert(!is_tuplish(42_c));
+	
 	static_assert([t = Tuple{1, 2., 3u}] {
 		auto& [_1, _2, _3] = t;
 		return _1 == 1 && _2 == 2. && _3 == 3u;

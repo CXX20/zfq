@@ -11,13 +11,13 @@ namespace zfq {
 				std::is_same_v<T, typename C::type>, int> = 0> constexpr Type(C) {}
 		template<typename... As> constexpr auto operator()(As&&... as) const
 		-> decltype(T{std::declval<As>()...}) { return T{std::forward<As>(as)...}; }
+		template<typename C> constexpr auto operator==(C) const // HACK for IDE: !!
+		-> Value<!!std::is_same_v<T, typename C::type>> { return {}; }
+		template<typename C> constexpr auto operator!=(C) const
+		-> Value<!std::is_same_v<T, typename C::type>> { return {}; }
 	};
 	template<typename C> Type(C) -> Type<typename C::type>;
 	template<typename T> inline Type<T> constexpr type;
-	template<typename T, typename C> constexpr auto operator==(Type<T>, C)
-	-> Value<!!std::is_same_v<T, typename C::type>> { return {}; } // HACK for IDE
-	template<typename T, typename C> constexpr auto operator!=(Type<T>, C)
-	-> Value<!std::is_same_v<T, typename C::type>> { return {}; }
 
 	template<auto t> using Decltype = typename decltype(t)::type;
 }

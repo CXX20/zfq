@@ -1,9 +1,7 @@
 #include "../zfq/value.hpp"
 
 namespace {
-	using zfq::Typelvl, zfq::Value, zfq::operator""_c;
-
-	static_assert(Typelvl<Value<42>>);
+	using zfq::Value, zfq::operator""_c;
 
 	static_assert(Value<42>::value == 42);
 	static_assert(0_c == 0);
@@ -26,10 +24,4 @@ namespace {
 	static_assert(std::is_same_v<decltype(Value{value<42>}), Value<42>>);
 	static_assert(std::is_same_v<
 			decltype(Value{std::integral_constant<int, 42>{}}), Value<42>>);
-
-	using zfq::assert_;
-
-	static_assert((assert_(42), true));
-	static_assert((assert_(42_c), true));
-	static_assert((assert_(std::integral_constant<int, 42>{}), true));
 }
