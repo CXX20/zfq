@@ -23,6 +23,7 @@ namespace {
 	static_assert(std::is_same_v<
 			zfq::Decltype<Tuple<type<int const&>>::typeof(0_c)>, int const&>);
 
+	static_assert(Tuple{} == Tuple{});
 	static_assert(Tuple{1, 2} == Tuple{1, 2});
 	static_assert(Tuple{1, 2} != Tuple{3, 4});
 	static_assert((Tuple{1, 2} != Tuple{3}).value);
@@ -44,8 +45,15 @@ namespace {
 		struct Wrapper: Tuple3 {};
 		static_assert([t = Wrapper{1, 2., 3u}] {
 			apply([](int, double, unsigned) {}, t);
-			auto& [_1, _2, _3] = t;
-			return size(t) == 3_c && t == t && _1 == 1 && _2 == 2. && _3 == 3u;
+			auto [_1, _2, _3] = t;
+			return size(t).value == 3 && t == t && _1 == 1 && _2 == 2. && _3 == 3u;
 		}());
 	}
+
+	using zfq::make_idx_seq;
+
+	static_assert((make_idx_seq(0_c) == Tuple{}).value);
+	static_assert((make_idx_seq(1_c) == Tuple{0_c}).value);
+	static_assert((make_idx_seq(2_c) == Tuple{0_c, 1_c}).value);
+	static_assert((make_idx_seq(3_c) == Tuple{0_c, 1_c, 2_c}).value);
 }

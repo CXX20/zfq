@@ -1,46 +1,66 @@
 #ifndef ZFQ_HEADER_FN
 #define ZFQ_HEADER_FN
 
+#include <cassert>
+#include <utility>
 #include "type.hpp"
 
-namespace zfq::_pipe {
-	struct Immovable { // HACK should be somewhere else
-		constexpr Immovable() = default;
-		Immovable(Immovable&&) = delete;
+namespace zfq::_fn {
+	template<typename F> struct Trail: private F {
+		template<typename A>
+		friend constexpr decltype(auto) operator|(A&& arg, Trail&& self)
+		{ return self(std::forward<A>(arg)); }
+		constexpr Trail(F const& src): F{src} {}
+		Trail(Trail&&) = delete;
 	};
-
-	template<Type f> struct Trail: Decltype<f>, Immovable {
-		template<typename A> friend auto operator|(A&&, Trail const&) = delete;
-		template<typename A> friend auto operator|(A&&, Trail&) = delete;
-		template<typename A> friend constexpr auto operator|(A&& arg, Trail&& me)
-		-> decltype(auto) { return me(std::forward<A>(arg)); }
-	private: using Decltype<f>::operator();
-	};
-	template<typename F> Trail(F) -> Trail<Type<F>{}>; // HACK for IDE: not type<>
 }
 namespace zfq::adl_barrier {
-	template<auto f> struct Pipe: private decltype(f) {
-		template<typename A> friend constexpr auto operator|(A&& a, Pipe const& me)
-		-> decltype(auto) { return me.decltype(f)::operator()(std::forward<A>(a)); }
-		template<typename A> friend constexpr auto operator|(A&& a, Pipe& me)
-		-> decltype(auto) { return me.decltype(f)::operator()(std::forward<A>(a)); }
-		template<typename A> friend constexpr auto operator|(A&& a, Pipe&& me)
-		-> decltype(auto) { return me.decltype(f)::operator()(std::forward<A>(a)); }
-		using decltype(f)::operator();
+	template<auto f, u8 n = -1> struct Pipe: Decltype<f> {
+		template<typename A>
+		friend constexpr decltype(auto) operator|(A&& arg, Pipe const& self)
+		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
+		template<typename A>
+		friend constexpr decltype(auto) operator|(A&& arg, Pipe& self)
+		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
+		template<typename A>
+		friend constexpr decltype(auto) operator|(A&& arg, Pipe const&& self)
+		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
+		template<typename A>
+		friend constexpr decltype(auto) operator|(A&& arg, Pipe&& self)
+		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
+		constexpr Pipe() = default;
+		constexpr Pipe(Decltype<f> const& src, Const<n> = {}): Decltype<f>{src} {}
+		using Decltype<f>::operator();
 		template<typename... As, std::enable_if_t<
-			!std::is_invocable_v<decltype(f), As...>, int
+			!std::is_invocable_v<Decltype<f>, As...> && sizeof...(As) < n, int
 		> = 0> [[nodiscard]] constexpr auto operator()(As&&... args) const {
-			return _pipe::Trail{[&]<typename A>(A&& arg)
-			-> decltype(f(std::declval<A>(), std::declval<As>()...))
-			{ return f(std::forward<A>(arg), std::forward<As>(args)...); }};
+			return _fn::Trail{[&, this]<typename A>(A&& arg) -> decltype(auto) {
+				return Decltype<f>::operator()(
+						std::forward<A>(arg), std::forward<As>(args)...);
+			}};
 		}
 	};
-	template<typename F> Pipe(F) -> Pipe<F{}>;
+	template<typename F> Pipe(F) -> Pipe<type<F>>;
+	template<typename F, typename N> Pipe(F, N)
+	-> Pipe<type<F>, const_<N::value>>;
 
-	template<auto... fs> struct Overload: Decltype<fs>...
-	{ using Decltype<fs>::operator()...; }; // HACK for IDE, should be: Type... fs
+	template<auto... fs> struct Overload
+	: Decltype<fs>... { using Decltype<fs>::operator()...; };
 	template<typename... Fs> Overload(Fs...) -> Overload<type<Fs>...>;
 }
-namespace zfq { using namespace adl_barrier; }
+namespace zfq {
+	using namespace adl_barrier; // TODO extract
+	
+	template<auto f, auto n> using Cpo = Pipe<type<decltype(f)>, n>;
+	
+	template<typename T> concept Meta = // TODO extract
+		std::is_empty_v<std::remove_cvref_t<T>> &&
+		std::is_trivial_v<std::remove_cvref_t<T>>;
+	inline Pipe constexpr meta_assert = []<typename T>(T)
+	{ static_assert(T::value); };
+	inline Pipe constexpr assert_ = Overload{
+			[](auto&& t) { std::is_constant_evaluated() && !t ? throw : assert(t); },
+			[](Meta auto&& t) { meta_assert(t); }};
+}
 
 #endif
