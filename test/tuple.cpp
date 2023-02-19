@@ -14,7 +14,7 @@ namespace {
 	static_assert(tuple3[0_c] == 1);
 	static_assert(tuple3[1_c] == 2.);
 	static_assert(tuple3[2_c] == 3u);
-	static_assert(size(tuple3).value == 3);
+	static_assert(zfq::cpo::size(tuple3).value == 3);
 	static_assert(Tuple3::typeof(std::integral_constant<int, 0>{}) == type<int>);
 	static_assert(Tuple3::typeof(0_c) == type<int>);
 	static_assert(Tuple3::typeof(1_c) == type<double>);
@@ -46,7 +46,9 @@ namespace {
 		static_assert([t = Wrapper{1, 2., 3u}] {
 			apply([](int, double, unsigned) {}, t);
 			auto [_1, _2, _3] = t;
-			return size(t).value == 3 && t == t && _1 == 1 && _2 == 2. && _3 == 3u;
+			return
+				zfq::cpo::size(t).value == 3 &&
+				t == t && _1 == 1 && _2 == 2. && _3 == 3u;
 		}());
 	}
 

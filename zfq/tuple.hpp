@@ -4,25 +4,25 @@
 #include "fn.hpp"
 
 namespace zfq::cpo {
-	inline Cpo<[](auto const& t) -> decltype(size(t))
-	{ return size(t); }, 1> constexpr size;
+	inline Cpo<Overload{
+		[](auto const& t) requires requires { t.size(); } { return t.size(); },
+		[](auto const& t) -> decltype(size(t)) { return size(t); }
+	}, 1> constexpr size;
 	inline Cpo<[]<typename F, typename T>(F&& fn, T&& tuple)
-	-> decltype(apply(fn, std::declval<T>()))
+	-> decltype(apply(fn, std::forward<T>(tuple)))
 	{ return apply(fn, std::forward<T>(tuple)); }, 2> constexpr apply;
 }
-namespace zfq::_tuple {
+namespace zfq::_impl::tuple {
 	template<typename T, auto i> struct Elem {
-		[[no_unique_address]] T _t;
+		T _t;
+		
 		static constexpr auto typeof(Const<i>) { return type<T>; }
-		constexpr auto& operator[](Const<i>) const& { return _t; }
-		constexpr auto& operator[](Const<i>) & { return _t; }
-		constexpr auto&& operator[](Const<i>) const&&
-		{ return std::forward<T const>(_t); }
+		
+		constexpr auto&& operator[](Const<i>) const& { return _t; }
+		constexpr auto&& operator[](Const<i>) & { return _t; }
 		constexpr auto&& operator[](Const<i>) && { return std::forward<T>(_t); }
-		constexpr auto& operator[](Type<T>) const& { return _t; }
-		constexpr auto& operator[](Type<T>) & { return _t; }
-		constexpr auto&& operator[](Type<T>) const&&
-		{ return std::forward<T const>(_t); }
+		constexpr auto&& operator[](Type<T>) const& { return _t; }
+		constexpr auto&& operator[](Type<T>) & { return _t; }
 		constexpr auto&& operator[](Type<T>) && { return std::forward<T>(_t); }
 	};
 
@@ -33,10 +33,11 @@ namespace zfq::_tuple {
 }
 namespace zfq {
 	template<auto... ts> struct Tuple
-	: _tuple::Tuple<std::make_index_sequence<sizeof...(ts)>, Decltype<ts>...> {
-		friend constexpr auto size(Tuple const&) { return sizeof_pack(ts...); }
+	: _impl::tuple::Tuple<
+			std::make_index_sequence<sizeof...(ts)>, Decltype<ts>...> {
+		constexpr auto size() const { return sizeof_pack(ts...); }
 		template<typename U> constexpr auto operator==(U const& u) const {
-			if constexpr (decltype(size(*this) == size(u))::value)
+			if constexpr (decltype(cpo::size(*this) == cpo::size(u))::value)
 				return cpo::apply([&](auto&&... es) {
 					return cpo::apply([&...es = es](auto&&... ds) {
 						return !!(true_ & ... & (es == ds));
@@ -51,9 +52,8 @@ namespace zfq {
 	template<auto... ts> Tuple(Tuple<ts...>) -> Tuple<type<Tuple<ts...>>>;
 	
 	inline Pipe constexpr make_idx_seq = []<typename N>(N) {
-		return []<auto... is>(std::index_sequence<is...>) {
-			return Tuple{const_<u64{is}>...};
-		}(std::make_index_sequence<N::value>{});
+		return []<auto... is>(std::index_sequence<is...>)
+		{ return Tuple{const_<is>...}; }(std::make_index_sequence<N::value>{});
 	};
 	template<typename F, typename T>
 	constexpr decltype(auto) apply(F&& fn, T&& tuple) {
@@ -68,8 +68,10 @@ namespace zfq {
 	{ return std::forward<T>(tuple)[const_<i>]; }
 }
 template<typename T> requires requires(T t) { _zfq_tuplish(t); }
-struct std::tuple_size<T>
-{ static auto constexpr value = decltype(size(std::declval<T>()))::value; };
+struct std::tuple_size<T> {
+	static auto constexpr value =
+		decltype(zfq::cpo::size(std::declval<T>()))::value;
+};
 template<auto i, typename T> requires requires(T t) { _zfq_tuplish(t); }
 struct std::tuple_element<i, T>
 { using type = zfq::Decltype<T::typeof(zfq::const_<i>)>; };

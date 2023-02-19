@@ -4,71 +4,81 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace zfq {
-	using u8 = std::uint8_t;
-	using u64 = std::uint64_t;
+namespace zfq::_impl::const_ {
+	template<typename T> struct Convertible { T t; };
 
+	template<char b, char... cs> inline auto constexpr pp = [] {
+		int ret{}, to_int[256];
+		for (char i = '0'; i <= '9'; ++i) to_int[i] = i - '0';
+		for (char i = 'a'; i <= 'f'; ++i) to_int[i] = i - 'a' + 10;
+		for (char i = 'A'; i <= 'F'; ++i) to_int[i] = i - 'A' + 10;
+		return (ret, ..., (ret = cs == '\'' ? ret : ret * b + to_int[cs]));
+	};
+	template<char... cs> inline auto constexpr p = pp<10, cs...>;
+	template<char... cs> inline auto constexpr p<'0', cs...> = pp<8, cs...>;
+	template<char... cs> inline auto constexpr p<'0', 'b', cs...> = pp<2, cs...>;
+	template<char... cs> inline auto constexpr p<'0', 'B', cs...> = pp<2, cs...>;
+	template<char... cs> inline auto constexpr p<'0', 'x', cs...> = pp<16, cs...>;
+	template<char... cs> inline auto constexpr p<'0', 'X', cs...> = pp<16, cs...>;
+}
+namespace zfq {
 	template<auto t> struct Const {
 		static auto constexpr value = t;
+
 		constexpr Const() = default;
-		template<typename U> constexpr Const(U) requires (t == U::value) {}
+		template<typename U> constexpr Const(U) requires (U::value == value) {}
+
 		template<typename U> constexpr operator U() const
-		requires (requires { U{value}; } && std::is_convertible_v<U, decltype(t)>)
-		{ return U{value}; }
-		constexpr operator decltype(t)() const { return t; }
+		requires requires { _impl::const_::Convertible<U>{value}; }
+		{ return value; }
+		constexpr operator decltype(value)() const { return value; }
+
 		template<auto u = t> constexpr Const<!u> operator!() const { return {}; }
 		template<auto u = t> constexpr Const<-u> operator-() const { return {}; }
 		template<auto u = t> constexpr Const<~u> operator~() const { return {}; }
-		template<typename U> constexpr Const<t == U::value> operator==(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t != U::value> operator!=(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t < U::value> operator<(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<(t > U::value)> operator>(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t <= U::value> operator<=(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t >= U::value> operator>=(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t <=> U::value> operator<=>(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t + U::value> operator+(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t - U::value> operator-(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t * U::value> operator*(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t / U::value> operator/(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t % U::value> operator%(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t & U::value> operator&(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t | U::value> operator|(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t ^ U::value> operator^(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<t << U::value> operator<<(U) const
-		{ return {}; }
-		template<typename U> constexpr Const<(t >> U::value)> operator>>(U) const
-		{ return {}; }
+		template<typename U> constexpr auto operator==(U) const
+		-> Const<value == U::value> { return {}; }
+		template<typename U> constexpr auto operator!=(U) const
+		-> Const<value != U::value> { return {}; }
+		template<typename U> constexpr auto operator<(U) const
+		-> Const<value < U::value> { return {}; }
+		template<typename U> constexpr auto operator>(U) const
+		-> Const<(value > U::value)> { return {}; }
+		template<typename U> constexpr auto operator<=(U) const
+		-> Const<value <= U::value> { return {}; }
+		template<typename U> constexpr auto operator>=(U) const
+		-> Const<value >= U::value> { return {}; }
+		template<typename U> constexpr auto operator<=>(U) const
+		-> Const<value <=> U::value> { return {}; }
+		template<typename U> constexpr auto operator+(U) const
+		-> Const<value + U::value> { return {}; }
+		template<typename U> constexpr auto operator-(U) const
+		-> Const<value - U::value> { return {}; }
+		template<typename U> constexpr auto operator*(U) const
+		-> Const<value * U::value> { return {}; }
+		template<typename U> constexpr auto operator/(U) const
+		-> Const<value / U::value> { return {}; }
+		template<typename U> constexpr auto operator%(U) const
+		-> Const<value % U::value> { return {}; }
+		template<typename U> constexpr auto operator&(U) const
+		-> Const<value & U::value> { return {}; }
+		template<typename U> constexpr auto operator|(U) const
+		-> Const<value | U::value> { return {}; }
+		template<typename U> constexpr auto operator^(U) const
+		-> Const<value ^ U::value> { return {}; }
+		template<typename U> constexpr auto operator<<(U) const
+		-> Const<value << U::value> { return {}; }
+		template<typename U> constexpr auto operator>>(U) const
+		-> Const<(value >> U::value)> { return {}; }
 	};
 	template<typename U> Const(U) -> Const<U::value>;
 	template<auto t> inline Const<t> constexpr const_;
-	template<char... cs> constexpr auto operator""_c() {
-		return const_<[i = 0, chars = {cs...}]() mutable {
-			for (auto c: chars)
-				i = c == '\'' ? i : c < '0' || c > '9' ? throw : i * 10 + (c - '0');
-			return *chars.begin() == '0' && chars.size() != 1 ? throw : i;
-		}()>;
-	}
-	template<u8 i> inline Const<i> constexpr u8_;
-	template<u64 i> inline Const<i> constexpr u64_;
+	template<char... cs> constexpr auto operator""_c()
+	{ return const_<_impl::const_::p<cs...>()>; }
 	inline Const<true> constexpr true_;
 	inline Const<false> constexpr false_;
 	inline auto constexpr sizeof_pack = []<typename... Ts>(Ts&&...)
-	{ return u64_<sizeof...(Ts)>; };
+	{ return const_<sizeof...(Ts)>; };
 }
 
 #endif
