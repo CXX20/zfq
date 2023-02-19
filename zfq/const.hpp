@@ -24,15 +24,12 @@ namespace zfq::_impl::const_ {
 namespace zfq {
 	template<auto t> struct Const {
 		static auto constexpr value = t;
-
 		constexpr Const() = default;
-		template<typename U> constexpr Const(U) requires (U::value == value) {}
-
+		template<typename C> constexpr Const(C) requires (C::value == value) {}
 		template<typename U> constexpr operator U() const
 		requires requires { _impl::const_::Convertible<U>{value}; }
 		{ return value; }
 		constexpr operator decltype(value)() const { return value; }
-
 		template<auto u = t> constexpr Const<!u> operator!() const { return {}; }
 		template<auto u = t> constexpr Const<-u> operator-() const { return {}; }
 		template<auto u = t> constexpr Const<~u> operator~() const { return {}; }
@@ -71,14 +68,12 @@ namespace zfq {
 		template<typename U> constexpr auto operator>>(U) const
 		-> Const<(value >> U::value)> { return {}; }
 	};
-	template<typename U> Const(U) -> Const<U::value>;
+	template<typename C> Const(C) -> Const<C::value>;
 	template<auto t> inline Const<t> constexpr const_;
-	template<char... cs> constexpr auto operator""_c()
-	{ return const_<_impl::const_::p<cs...>()>; }
 	inline Const<true> constexpr true_;
 	inline Const<false> constexpr false_;
-	inline auto constexpr sizeof_pack = []<typename... Ts>(Ts&&...)
-	{ return const_<sizeof...(Ts)>; };
+	template<char... cs> constexpr auto operator""_c()
+	{ return const_<_impl::const_::p<cs...>()>; }
 }
 
 #endif

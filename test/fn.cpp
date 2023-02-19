@@ -37,39 +37,47 @@ namespace {
 	static_assert(sfinae(42) == -42);
 	static_assert(!requires_(sfinae, [](auto&& fn) -> decltype(fn((void*)0)) {}));
 
-	namespace lib1 {
-		namespace cpo { Cpo<[](auto t) { return foo(t); }, 1> constexpr foo; }
-		struct Foo {};
-		template<typename T> constexpr auto foo(T) { return 1; }
-	}
-	namespace lib2 {
-		namespace cpo { Cpo<[](auto t) { return foo(t); }, 1> constexpr foo; }
-		struct Foo {};
-		template<typename T> constexpr auto foo(T) { return 2; }
-		static_assert(cpo::foo(lib1::Foo{}) == 1);
-		static_assert(cpo::foo(Foo{}) == 2);
-	}
-	static_assert(foo(lib1::Foo{}) == 1);
-	static_assert(foo(lib2::Foo{}) == 2);
-	static_assert(lib1::cpo::foo(lib1::Foo{}) == 1);
-	static_assert(lib1::cpo::foo(lib2::Foo{}) == 2);
-	static_assert(lib2::cpo::foo(lib1::Foo{}) == 1);
-	static_assert(lib2::cpo::foo(lib2::Foo{}) == 2);
-
 	static_assert(!requires_(42_c, [](auto random_adl_pipe)
 	-> decltype(random_adl_pipe | [](auto&&) {}) {}));
-}
-
-namespace zfq { template<typename T> static constexpr void adl_barriered(T) {} }
-namespace {
-	template<typename T> constexpr auto adl_barriered(T) { return true; }
-	
-	static_assert(adl_barriered(sqr));
 
 	using zfq::Overload;
 
 	Overload constexpr set{[](int) { return 1; }, [](int*) { return 2; }};
 	static_assert(set(42) == 1);
 	static_assert(set(nullptr) == 2);
-	static_assert(adl_barriered(set));
+}
+namespace zfq {
+	Cpo<[](auto const& t) -> decltype(customize(adl::tag_for(t), t))
+	{ return customize(adl::tag_for(t), t); }, 1> constexpr customize;
+	namespace adl {
+		template<typename T> static constexpr auto customize(adl::Tag, T const&)
+		{ return 0; }
+	}
+}
+namespace { namespace ext {
+	struct Unaware {};
+	constexpr auto customize(zfq::adl::Tag, Unaware) { return 42; }
+} }
+namespace { namespace lib1 {
+	template<typename...> struct Conflict {};
+	namespace adl {
+		struct Tag {} constexpr tag;
+		template<typename T> constexpr auto customize(Tag, T const&) { return 1; }
+	}
+	template<typename T> constexpr auto adl_tag(T const&) { return adl::tag; }
+} }
+namespace { namespace lib2 {
+	template<typename...> struct Conflict {};
+	namespace adl {
+		struct Tag {} constexpr tag;
+		template<typename T> constexpr auto customize(Tag, T const&) { return 2; }
+	}
+	template<typename T> constexpr auto adl_tag(T const&) { return adl::tag; }
+} }
+namespace {
+	using Conflict1 = lib1::Conflict<ext::Unaware, lib2::Conflict<>>;
+	using Conflict2 = lib2::Conflict<ext::Unaware, lib1::Conflict<>>;
+	static_assert(zfq::customize(ext::Unaware{}) == 42);
+	static_assert(zfq::customize(Conflict1{}) == 1);
+	static_assert(zfq::customize(Conflict2{}) == 2);
 }

@@ -5,70 +5,60 @@
 #include <utility>
 #include "type.hpp"
 
+namespace zfq::adl { inline struct Tag {} constexpr tag; }
 namespace zfq::_impl::fn {
+	template<typename> struct Type {};
+	template<template<typename...> typename> struct Template {};
+
 	template<typename F> struct Trail: private F {
+		constexpr Trail(F src): F{src} {}
+		Trail(Trail&&) = delete;
 		template<typename A> friend void operator|(A&&, Trail const&) = delete;
 		template<typename A> friend void operator|(A&&, Trail&) = delete;
 		template<typename A> friend void operator|(A&&, Trail const&&) = delete;
-		template<typename A>
-		friend constexpr decltype(auto) operator|(A&& arg, Trail&& self)
-		{ return self(std::forward<A>(arg)); }
-		
-		constexpr Trail(F const& src): F{src} {}
-		Trail(Trail&&) = delete;
+		template<typename A> friend constexpr auto operator|(A&& a, Trail&& me)
+		-> decltype(auto) { return me(std::forward<A>(a)); }
 	};
-}
-namespace zfq::adl_barrier {
-	template<auto f, auto n = 1024> struct Pipe: Decltype<f> {
-		template<typename A>
-		friend constexpr decltype(auto) operator|(A&& arg, Pipe const& self)
-		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
-		template<typename A>
-		friend constexpr decltype(auto) operator|(A&& arg, Pipe& self)
-		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
-		template<typename A>
-		friend constexpr decltype(auto) operator|(A&& arg, Pipe const&& self)
-		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
-		template<typename A>
-		friend constexpr decltype(auto) operator|(A&& arg, Pipe&& self)
-		{ return self.Decltype<f>::operator()(std::forward<A>(arg)); }
-
-		constexpr Pipe() = default;
-		constexpr Pipe(Decltype<f> const& src, Const<n> = {}): Decltype<f>{src} {}
-		
-		using Decltype<f>::operator();
-		template<typename... As, std::enable_if_t<
-			!std::is_invocable_v<Decltype<f>, As...> && sizeof...(As) < n, int
-		> = 0> [[nodiscard]] constexpr auto operator()(As&&... args) const {
-			return _impl::fn::Trail{[&, this]<typename A>(A&& arg) -> decltype(auto) {
-				return Decltype<f>::operator()(
-						std::forward<A>(arg), std::forward<As>(args)...);
-			}};
-		}
-	};
-	template<typename F> Pipe(F) -> Pipe<type<F>>;
-	template<typename F, typename N> Pipe(F, N) -> Pipe<type<F>, N::value>;
-
-	template<auto... fs> struct Overload
-	: Decltype<fs>... { using Decltype<fs>::operator()...; };
-	template<typename... Fs> Overload(Fs...) -> Overload<type<Fs>...>;
 }
 namespace zfq {
-	using namespace adl_barrier; // TODO extract
+	template<typename F, unsigned n = 1024> struct Pipe: private F {
+		constexpr Pipe() = default;
+		constexpr Pipe(F src, Const<n> = {}): F{src} {}
+		using F::operator();
+		template<typename... As, std::enable_if_t<
+			!std::is_invocable_v<F, As...> && sizeof...(As) < n, int
+		> = 0> [[nodiscard]] constexpr auto operator()(As&&... as) const {
+			return _impl::fn::Trail{[&, *this]<typename A>(A&& a) -> decltype(auto)
+			{ return F::operator()(std::forward<A>(a), std::forward<As>(as)...); }};
+		}
+		template<typename A> friend constexpr auto operator|(A&& a, Pipe me)
+		-> decltype(auto) { return me.F::operator()(std::forward<A>(a)); }
+	};
+	template<typename F, typename N> Pipe(F, N) -> Pipe<F, N::value>;
+	template<auto f, auto n> using Cpo = Pipe<decltype(f), n>;
 	
-	template<auto f, auto n> using Cpo = Pipe<type<decltype(f)>, n>;
-	
+	template<typename... Fs> struct Overload: Fs... { using Fs::operator()...; };
+	template<typename... Fs> Overload(Fs...) -> Overload<Fs...>;
+
 	inline Pipe constexpr requires_ = []<typename A, typename F>(A&& arg, F&& fn)
 	{ return const_<requires { fn(std::forward<A>(arg)); }>; };
+	
+	template<typename T> constexpr auto adl_tag(T const&) { return adl::tag; }
+}
+namespace zfq::adl {
+	inline Pipe constexpr tag_for = [](auto const& t)
+	-> decltype(adl_tag(adl::tag, t)) { return adl_tag(adl::tag, t); };
 
-	template<typename T> concept Meta = // TODO extract
-		std::is_empty_v<std::remove_cvref_t<T>> &&
-		std::is_trivial_v<std::remove_cvref_t<T>>;
-	inline Pipe constexpr meta_assert = []<typename T>(T)
-	{ static_assert(T::value); };
-	inline Pipe constexpr assert_ = Overload{
-			[](auto&& t) { std::is_constant_evaluated() && !t ? throw : assert(t); },
-			[](Meta auto&& t) { meta_assert(t); }};
+	template<typename T, typename... As>
+	constexpr auto adl_tag(Tag, T const&, As&&...) {
+		static_assert(!sizeof...(As));
+		return tag;
+	}
+	template<typename T> constexpr auto adl_tag(Tag, T const&)
+	-> decltype(adl_tag(_impl::fn::Type<T>{})) { return {}; }
+	template<template<typename...> typename C, typename... As>
+	constexpr auto adl_tag(Tag, C<As...> const&)
+	-> decltype(adl_tag(_impl::fn::Template<C>{})) { return {}; }
 }
 
 #endif
