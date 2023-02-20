@@ -28,6 +28,11 @@ namespace zfq {
 	}, 1> constexpr view;
 }
 namespace zfq::_impl::tuple {
+	template<typename T> concept ZfqTuplish = requires(T t) {
+		{ decltype(t.size())::value };
+		{ adl::overridden_tag(t) } -> std::same_as<adl::Tag>;
+	};
+
 	template<typename T, auto i> struct Elem {
 		T _t;
 		static constexpr auto typeof(Const<i>) { return type<T>; }
@@ -63,9 +68,8 @@ namespace zfq {
 	template<typename... Ts> Tuple(Ts...) -> Tuple<Ts...>;
 	template<typename... Ts> Tuple(Tuple<Ts...>) -> Tuple<Tuple<Ts...>>;
 	
-	template<typename T> auto _zfq_tuplish(T&& t) -> decltype(t.size().value);
-	template<auto i, typename T> constexpr decltype(auto) get(T&& tuple)
-	{ return std::forward<T>(tuple)[const_<i>]; }
+	template<auto i, _impl::tuple::ZfqTuplish T> constexpr auto get(T&& t)
+	-> decltype(auto) { return std::forward<T>(t)[const_<i>]; }
 }
 namespace zfq::adl {
 	template<typename F, typename T>
@@ -81,11 +85,9 @@ namespace zfq::adl {
 	}
 }
 namespace std {
-	template<typename T> requires requires(T t) { _zfq_tuplish(t); }
-	struct tuple_size<T>
-	{ static auto constexpr value = decltype(std::declval<T>().size())::value; };
-	template<auto i, typename T> requires requires(T t) { _zfq_tuplish(t); }
-	struct tuple_element<i, T>
+	template<zfq::_impl::tuple::ZfqTuplish T> struct tuple_size<T>
+	{ static auto constexpr value = decltype(declval<T>().size())::value; };
+	template<auto i, zfq::_impl::tuple::ZfqTuplish T> struct tuple_element<i, T>
 	{ using type = zfq::Decltype<T::typeof(zfq::const_<i>)>; };
 }
 

@@ -51,3 +51,14 @@ namespace {
 		}());
 	}
 }
+namespace { namespace ext {
+	struct Tag {} constexpr tag;
+	template<typename T> constexpr auto adl_tag(T const&) { return tag; }
+	template<typename...> struct Conflict
+	{ constexpr auto operator==(Conflict const&) const { return true; } };
+	template<auto i, typename T> constexpr auto get(T&& t)
+	requires std::is_same_v<decltype(zfq::adl::tag_for(t)), Tag>
+	{ return i; }
+	static_assert(get<0>(Conflict<zfq::Tuple<>>{}) == 0);
+	static_assert(get<0>(zfq::Tuple<Conflict<>>{}) == Conflict{});
+} }

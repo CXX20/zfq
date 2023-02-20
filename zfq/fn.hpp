@@ -5,10 +5,14 @@
 #include <utility>
 #include "type.hpp"
 
-namespace zfq::adl { inline struct Tag {} constexpr tag; }
 namespace zfq::_impl::fn {
-	template<typename> struct Type {};
-	template<template<typename...> typename> struct Template {};
+	template<auto t> struct Hide: Decltype<t> {};
+	inline auto constexpr hide_ttp_from_adl_impl = []<typename T>(T const&) {
+		if constexpr (std::is_fundamental_v<T>) return type<T>;
+		else return type<Hide<type<T>>>;
+	}; // TODO remove this IDE bug workaround
+	template<typename T> auto hide_ttp_from_adl(T&& t)
+	-> typename decltype(hide_ttp_from_adl_impl(t))::type;
 
 	template<typename F> struct Trail: private F {
 		constexpr Trail(F src): F{src} {}
@@ -42,23 +46,17 @@ namespace zfq {
 
 	inline Pipe constexpr requires_ = []<typename A, typename F>(A&& arg, F&& fn)
 	{ return const_<requires { fn(std::forward<A>(arg)); }>; };
-	
-	template<typename T> constexpr auto adl_tag(T const&) { return adl::tag; }
 }
 namespace zfq::adl {
-	inline Pipe constexpr tag_for = [](auto const& t)
-	-> decltype(adl_tag(adl::tag, t)) { return adl_tag(adl::tag, t); };
-
-	template<typename T, typename... As>
-	constexpr auto adl_tag(Tag, T const&, As&&...) {
-		static_assert(!sizeof...(As));
-		return tag;
-	}
-	template<typename T> constexpr auto adl_tag(Tag, T const&)
-	-> decltype(adl_tag(_impl::fn::Type<T>{})) { return {}; }
-	template<template<typename...> typename C, typename... As>
-	constexpr auto adl_tag(Tag, C<As...> const&)
-	-> decltype(adl_tag(_impl::fn::Template<C>{})) { return {}; }
+	inline struct Tag {} constexpr tag;
+	inline Pipe constexpr overridden_tag{[](auto&& t)
+	-> decltype(adl_tag(_impl::fn::hide_ttp_from_adl(t))) { return {}; }, 1_c};
+	inline Pipe constexpr tag_for = Overload{
+			overridden_tag,
+			[](auto&& t) requires (!requires { overridden_tag(t); }) { return tag; }};
+}
+namespace zfq {
+	template<typename T> constexpr auto adl_tag(T const&) { return adl::tag; }
 }
 
 #endif
