@@ -48,7 +48,10 @@ namespace {
 	static_assert(bool(42_c));
 	static_assert(42_c ? true : false);
 
-	struct Src {};
+	struct Src {} constexpr src;
 	struct Implicit { constexpr Implicit(Src) {} };
-	static_assert([](Implicit) { return true; }(const_<Src{}>));
+	Implicit constexpr implicit = const_<src>;
+	struct Explicit { constexpr explicit Explicit(Src) {} };
+	Explicit constexpr explicit_{const_<src>};
+	static_assert(!std::is_convertible_v<Const<src>, Explicit>);
 }

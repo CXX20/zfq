@@ -1,7 +1,6 @@
 #ifndef ZFQ_HEADER_CONST
 #define ZFQ_HEADER_CONST
 
-#include <cstdint>
 #include <type_traits>
 
 namespace zfq::_impl::const_ {
