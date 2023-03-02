@@ -42,10 +42,10 @@ The whole `zfq` library and its git repository are freely distributed under the 
 
 **How to use:** Say, there's a `zfq::foo(sth)` CPO which you want to extend for `yours::Sth`. Here are the options, from easiest to hardest:
 
-- If providing a member function is OK, overload `sth.foo()`.
+- To extend a class you control, overload `sth.foo()`.
 
-- If having a `yours::foo` function is OK (e.g. there's no `yours::foo` object to conflict), overload `yours::foo(zfq::adl::Tag, Sth)`.
+- To extend an already defined class, overload `yours::foo(zfq::adl::Specific<B>, Sth)`.
 
-- If the implementation should work for all types from `yours`, overload `yours::adl::Tag yours::adl_tag(T const&)` and `yours::adl::foo(Tag, T)`.
+- To extend all classes from `yours`, overload `yours::adl::Generic yours::adl_tag(T const&)` and `yours::adl::foo(Generic, T)`.
 
-- If the implementation should be program-wide generic (unless overridden with a custom `adl_tag()`), overload `zfq::adl::foo(Tag, T)`.
+- To extend all classes, overload `zfq::adl::foo(Generic, T)`.

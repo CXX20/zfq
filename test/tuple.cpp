@@ -30,11 +30,13 @@ namespace {
 	static_assert((Tuple{1_c, 2_c} == Tuple{1_c, 2_c}).value);
 	static_assert((Tuple{1_c, 2_c} != Tuple{1_c, 3_c}).value);
 
-	auto constexpr is_tuplish = []<typename T>(T const&)
-	{ return requires { sizeof(std::tuple_size<T>); }; };
-	static_assert(is_tuplish(Tuple{1, 2., 3u}));
-	static_assert(!is_tuplish(42));
-	static_assert(!is_tuplish(42_c));
+	using zfq::Tuplish;
+
+	struct Tuple0 { constexpr auto size() { return 0_c; } };
+	static_assert(Tuplish<Tuple3>);
+	static_assert(!Tuplish<Tuple0>);
+	static_assert(!Tuplish<int>);
+	static_assert(!Tuplish<zfq::Const<42>>);
 	
 	static_assert([t = Tuple{1, 2., 3u}] {
 		auto& [_1, _2, _3] = t;
@@ -56,9 +58,7 @@ namespace { namespace ext {
 	template<typename T> constexpr auto adl_tag(T const&) { return tag; }
 	template<typename...> struct Conflict
 	{ constexpr auto operator==(Conflict const&) const { return true; } };
-	template<auto i, typename T> constexpr auto get(T&& t)
-	requires std::is_same_v<decltype(zfq::adl::tag_for(t)), Tag>
-	{ return i; }
+	template<auto i, typename T> constexpr auto get(T&&) { return i; }
 	static_assert(get<0>(Conflict<zfq::Tuple<>>{}) == 0);
 	static_assert(get<0>(zfq::Tuple<Conflict<>>{}) == Conflict{});
 } }

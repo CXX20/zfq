@@ -7,12 +7,12 @@ namespace zfq::_impl::aggr {
 	struct Any { template<typename T> operator T(); };
 	template<auto> using AnyT = Any;
 
-	template<typename T, auto... is> requires requires { T{AnyT<is>{}...}; }
-	constexpr auto size(T const&, std::index_sequence<is...>)
-	{ return zfq::const_<sizeof...(is)>; }
 	template<typename T, auto... is>
-	constexpr auto size(T const& t, std::index_sequence<is...>)
-	{ return aggr::size(t, std::make_index_sequence<sizeof...(is) - 1>{}); }
+	constexpr auto size(std::index_sequence<is...>) {
+		if constexpr (requires { T{AnyT<is>{}...}; }) return Const<sizeof...(is)>{};
+		else if constexpr (!sizeof...(is)) return Const<std::size_t(-1)>{};
+		else return aggr::size<T>(std::make_index_sequence<sizeof...(is) - 1>{});
+	}
 	
 	template<typename... Es, typename C>
 	constexpr auto view_impl(Type<C>, Es&... es)
@@ -93,14 +93,14 @@ namespace zfq {
 }
 namespace zfq::adl {
 	template<typename F, Aggregatish T>
-	constexpr decltype(auto) apply(Tag, F&& fn, T&& t)
+	constexpr decltype(auto) apply(Generic, F&& fn, T&& t)
 	{ return zfq::apply(fn, zfq::view(std::forward<T>(t))); }
-	template<Aggregatish T> constexpr auto size(Tag, T const& t) {
-		auto size = _impl::aggr::size(t, std::make_index_sequence<16 + 1>{});
-		static_assert(decltype(size)::value != 16 + 1, "aggregate too large");
+	template<Aggregatish T> constexpr auto size(Generic, T const&) {
+		auto size = _impl::aggr::size<T>(std::make_index_sequence<16 + 1>{});
+		static_assert(decltype(size)::value <= 16, "aggregate too large");
 		return size;
 	}
-	template<Aggregatish T> constexpr auto view(Tag, T&& t)
+	template<Aggregatish T> constexpr auto view(Generic, T&& t)
 	{ return _impl::aggr::view(std::forward<T>(t), zfq::size(t)); }
 }
 

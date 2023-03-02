@@ -1,8 +1,6 @@
 #ifndef ZFQ_HEADER_CONST
 #define ZFQ_HEADER_CONST
 
-#include <type_traits>
-
 namespace zfq::_impl::const_ {
 	template<typename T> struct Convertible { T t; };
 

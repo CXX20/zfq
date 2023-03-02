@@ -1,4 +1,5 @@
 #include "../zfq/const.hpp"
+#include <type_traits>
 
 namespace {
 	using zfq::Const;

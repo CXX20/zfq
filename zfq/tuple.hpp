@@ -3,34 +3,10 @@
 
 #include "fn.hpp"
 
-namespace zfq {
-	template<typename T> concept Tuplish =
-		requires { sizeof(std::tuple_size<std::remove_cvref_t<T>>); };
-
-	inline Cpo<Overload{
-		[]<typename F, typename T>(F&& fn, T&& tuple) -> decltype(auto)
-		requires requires { std::forward<T>(tuple).apply(fn); }
-		{ return std::forward<T>(tuple).apply(fn); },
-		[]<typename F, typename T>(F&& fn, T&& tuple)
-		-> decltype(apply(adl::tag_for(tuple), fn, std::forward<T>(tuple)))
-		{ return apply(adl::tag_for(tuple), fn, std::forward<T>(tuple)); }
-	}, 2> constexpr apply;
-	inline Cpo<Overload{
-		[](auto const& t) requires requires { t.size(); } { return t.size(); },
-		[](auto const& t) -> decltype(size(adl::tag_for(t), t))
-		{ return size(adl::tag_for(t), t); },
-	}, 1> constexpr size;
-	inline Cpo<Overload{
-		[]<typename T>(T&& t) requires requires { std::forward<T>(t).view(); }
-		{ return std::forward<T>(t).view(); },
-		[]<typename T>(T&& t) -> decltype(view(adl::tag_for(t), std::forward<T>(t)))
-		{ return view(adl::tag_for(t), std::forward<T>(t)); }
-	}, 1> constexpr view;
-}
 namespace zfq::_impl::tuple {
 	template<typename T> concept ZfqTuplish = requires(T t) {
 		{ decltype(t.size())::value };
-		{ adl::overridden_tag(t) } -> std::same_as<adl::Tag>;
+		{ adl::tag_for(t) } -> std::same_as<adl::Generic>;
 	};
 
 	template<typename T, auto i> struct Elem {
@@ -50,6 +26,19 @@ namespace zfq::_impl::tuple {
 	{ using Elem<Ts, is>::typeof..., Elem<Ts, is>::operator[]...; };
 }
 namespace zfq {
+	template<typename T> concept Tuplish =
+		requires { std::tuple_size<std::remove_cvref_t<T>>::value; };
+
+	inline Cpo<[]<typename F, typename T>(F&& fn, T&& tuple)
+	-> decltype(apply(adl::dispatch(tuple), fn, std::forward<T>(tuple))) {
+		return apply(adl::dispatch(tuple), fn, std::forward<T>(tuple));
+	}, 2> constexpr apply;
+	inline Cpo<[](auto&& t) -> decltype(size(adl::dispatch(t), t))
+	{ return size(adl::dispatch(t), t); }, 1> constexpr size;
+	inline Cpo<[]<typename T>(T&& t)
+	-> decltype(view(adl::dispatch(t), std::forward<T>(t)))
+	{ return view(adl::dispatch(t), std::forward<T>(t)); }, 1> constexpr view;
+
 	template<typename... Ts> struct Tuple
 	: _impl::tuple::Base<std::index_sequence_for<Ts...>, Ts...> {
 		constexpr auto size() const { return const_<sizeof...(Ts)>; }
@@ -57,9 +46,8 @@ namespace zfq {
 			using zfq::size;
 			if constexpr (decltype(size(*this) != size(u))::value) return false_;
 			else return apply([&](auto&&... es) {
-				return apply([&...es = es](auto&&... ds) {
-					return !!(true_ & ... & (es == ds));
-				}, u); // TODO remove the explicit capture (compiler bug workaround)
+				return apply([&...es = es](auto&&... ds) // TODO rm ...es; compiler bug
+				{ return !!(true_ & ... & (es == ds)); }, u);
 			}, *this);
 		}
 		template<typename U> constexpr auto operator!=(U const& u) const
@@ -72,16 +60,23 @@ namespace zfq {
 	-> decltype(auto) { return std::forward<T>(t)[const_<i>]; }
 }
 namespace zfq::adl {
-	template<typename F, typename T>
-	constexpr decltype(auto) apply(Tag, F&& fn, T&& tuple) {
+	template<typename B, typename F, typename T>
+	constexpr auto apply(Specific<B>, F&& fn, T&& tuple)
+	-> decltype(std::forward<T>(tuple).apply(fn))
+	{ return std::forward<T>(tuple).apply(fn); }
+	template<typename F, Tuplish T>
+	constexpr decltype(auto) apply(Generic, F&& fn, T&& tuple) {
 		return [&]<auto... is>(std::index_sequence<is...>) -> decltype(auto) {
 			return fn(std::forward<T>(tuple)[const_<is>]...);
 		}(std::make_index_sequence<decltype(zfq::size(tuple))::value>{});
 	}
-	template<Tuplish T> constexpr auto view(Tag, T&& tuple) {
-		return zfq::apply([]<typename... Es>(Es&&... es) {
-			return Tuple<Es&&...>{std::forward<Es>(es)...};
-		}, std::forward<T>(tuple));
+	template<typename B, typename T> constexpr auto size(Specific<B>, T&& t)
+	-> decltype(t.size()) { return t.size(); }
+	template<typename B, typename T> constexpr auto view(Specific<B>, T&& t)
+	-> decltype(std::forward<T>(t).view()) { return std::forward<T>(t).view(); }
+	template<Tuplish T> constexpr auto view(Generic, T&& tuple) {
+		return zfq::apply([]<typename... Es>(Es&&... es) -> Tuple<Es&&...>
+		{ return {std::forward<Es>(es)...}; }, std::forward<T>(tuple));
 	}
 }
 namespace std {
