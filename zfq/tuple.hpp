@@ -3,7 +3,7 @@
 
 #include "fn.hpp"
 
-namespace zfq::_impl::tuple {
+namespace zfq::_tuple {
 	template<typename T> concept ZfqTuplish = requires(T t) {
 		{ decltype(t.size())::value };
 		{ adl::tag_for(t) } -> std::same_as<adl::Generic>;
@@ -44,7 +44,7 @@ namespace zfq {
 	{ return view(adl::dispatch(t), std::forward<T>(t)); }, 1> constexpr view;
 
 	template<typename... Ts> struct Tuple
-	: _impl::tuple::Base<std::index_sequence_for<Ts...>, Ts...> {
+	: _tuple::Base<std::index_sequence_for<Ts...>, Ts...> {
 		constexpr auto size() const { return const_<sizeof...(Ts)>; }
 		template<typename U> constexpr auto operator==(U const& u) const {
 			using zfq::size;
@@ -60,7 +60,7 @@ namespace zfq {
 	template<typename... Ts> Tuple(Ts...) -> Tuple<Ts...>;
 	template<typename... Ts> Tuple(Tuple<Ts...>) -> Tuple<Tuple<Ts...>>;
 	
-	template<auto i, _impl::tuple::ZfqTuplish T> constexpr auto get(T&& t)
+	template<auto i, _tuple::ZfqTuplish T> constexpr auto get(T&& t)
 	-> decltype(auto) { return std::forward<T>(t)[const_<i>]; }
 }
 namespace zfq::adl {
@@ -84,9 +84,9 @@ namespace zfq::adl {
 	}
 }
 namespace std {
-	template<zfq::_impl::tuple::ZfqTuplish T> struct tuple_size<T>
+	template<zfq::_tuple::ZfqTuplish T> struct tuple_size<T>
 	{ static auto constexpr value = decltype(declval<T>().size())::value; };
-	template<auto i, zfq::_impl::tuple::ZfqTuplish T> struct tuple_element<i, T>
+	template<auto i, zfq::_tuple::ZfqTuplish T> struct tuple_element<i, T>
 	{ using type = zfq::Decltype<T::typeof(zfq::const_<i>)>; };
 }
 

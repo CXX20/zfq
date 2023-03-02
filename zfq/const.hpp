@@ -1,7 +1,7 @@
 #ifndef ZFQ_HEADER_CONST
 #define ZFQ_HEADER_CONST
 
-namespace zfq::_impl::const_ {
+namespace zfq::_const {
 	template<typename T> struct Convertible { T t; };
 
 	template<char b, char... cs> inline auto constexpr pp = [] {
@@ -24,7 +24,7 @@ namespace zfq {
 		constexpr Const() = default;
 		template<typename C> constexpr Const(C) requires (C::value == value) {}
 		template<typename U> constexpr operator U() const
-		requires requires { _impl::const_::Convertible<U>{value}; }
+		requires requires { _const::Convertible<U>{value}; }
 		{ return value; }
 		constexpr operator decltype(value)() const { return value; }
 		template<auto u = t> constexpr Const<!u> operator!() const { return {}; }
@@ -70,7 +70,7 @@ namespace zfq {
 	inline Const<true> constexpr true_;
 	inline Const<false> constexpr false_;
 	template<char... cs> constexpr auto operator""_c()
-	{ return const_<_impl::const_::p<cs...>()>; }
+	{ return const_<_const::p<cs...>()>; }
 }
 
 #endif

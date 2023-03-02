@@ -5,7 +5,7 @@
 #include <utility>
 #include "type.hpp"
 
-namespace zfq::_impl::fn {
+namespace zfq::_fn {
 	template<typename F> struct [[nodiscard]] Trail: private F {
 		constexpr Trail(F src): F{src} {}
 		Trail(Trail&&) = delete;
@@ -27,7 +27,7 @@ namespace zfq {
 		using F::operator();
 		template<typename... As> constexpr auto operator()(As&&... tail) const
 		requires (!std::invocable<F, As...> && sizeof...(As) < n) {
-			return _impl::fn::Trail{[&, this]<typename A>(A&& a) -> decltype(auto)
+			return _fn::Trail{[&, this]<typename A>(A&& a) -> decltype(auto)
 			{ return F::operator()(std::forward<A>(a), std::forward<As>(tail)...); }};
 		}
 		template<typename A> friend constexpr auto operator|(A&& arg, Pipe self)
@@ -50,8 +50,7 @@ namespace zfq::adl {
 	template<typename T> Specific(T) -> Specific<T>;
 
 	inline Pipe constexpr tag_for{[]<typename T>(T const&)
-	-> decltype(adl_tag(std::declval<_impl::fn::Hide<type<T>>>()))
-	{ return {}; }, 1_c};
+	-> decltype(adl_tag(std::declval<_fn::Hide<type<T>>>())) { return {}; }, 1_c};
 	inline Pipe constexpr dispatch{Overload{
 		[](auto&& t) requires requires { tag_for(t); }
 		{ return Specific{tag_for(t)}; },
