@@ -15,9 +15,13 @@ namespace zfq::_impl::tuple {
 		constexpr auto&& operator[](Const<i>) const& { return _t; }
 		constexpr auto&& operator[](Const<i>) & { return _t; }
 		constexpr auto&& operator[](Const<i>) && { return std::forward<T>(_t); }
+		constexpr auto&& operator[](Const<i>) const&&
+		{ return std::forward<T const>(_t); }
 		constexpr auto&& operator[](Type<T>) const& { return _t; }
 		constexpr auto&& operator[](Type<T>) & { return _t; }
 		constexpr auto&& operator[](Type<T>) && { return std::forward<T>(_t); }
+		constexpr auto&& operator[](Type<T>) const&&
+		{ return std::forward<T const>(_t); }
 	};
 
 	template<typename...> struct Base;

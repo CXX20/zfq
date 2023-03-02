@@ -30,6 +30,23 @@ namespace {
 	static_assert((Tuple{1_c, 2_c} == Tuple{1_c, 2_c}).value);
 	static_assert((Tuple{1_c, 2_c} != Tuple{1_c, 3_c}).value);
 
+	template<typename T, typename L, typename R> concept Correct = requires(T t) {
+		{ t[0_c] } -> std::same_as<L>;
+		{ std::move(t)[0_c] } -> std::same_as<R>;
+	};
+	static_assert(Correct<Tuple<int>, int&, int&&>);
+	static_assert(Correct<Tuple<int> const, int const&, int const&&>);
+	static_assert(Correct<Tuple<int const>, int const&, int const&&>);
+	static_assert(Correct<Tuple<int const> const, int const&, int const&&>);
+	static_assert(Correct<Tuple<int&>, int&, int&>);
+	static_assert(Correct<Tuple<int&> const, int&, int&>);
+	static_assert(Correct<Tuple<int const&>, int const&, int const&>);
+	static_assert(Correct<Tuple<int const&> const, int const&, int const&>);
+	static_assert(Correct<Tuple<int&&>, int&, int&&>);
+	static_assert(Correct<Tuple<int&&> const, int&, int&&>);
+	static_assert(Correct<Tuple<int const&&>, int const&, int const&&>);
+	static_assert(Correct<Tuple<int const&&> const, int const&, int const&&>);
+
 	using zfq::Tuplish;
 
 	struct Tuple0 { constexpr auto size() { return 0_c; } };
