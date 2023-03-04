@@ -1,19 +1,6 @@
-#ifndef ZFQ_HEADER_AGGREGATE
-#define ZFQ_HEADER_AGGREGATE
-
-#include "tuple.hpp"
+#include "../tuple.hpp"
 
 namespace zfq::_aggr {
-	struct Any { template<typename T> operator T(); };
-	template<auto> using AnyT = Any;
-
-	template<typename T, auto... is>
-	constexpr auto size(std::index_sequence<is...>) {
-		if constexpr (requires { T{AnyT<is>{}...}; }) return const_<sizeof...(is)>;
-		else if constexpr (!sizeof...(is)) return const_<std::size_t(-1)>;
-		else return _aggr::size<T>(std::make_index_sequence<sizeof...(is) - 1>{});
-	}
-	
 	template<typename... Es, typename C>
 	constexpr auto view_impl(Type<C>, Es&... es)
 	{ return Tuple<Es&&...>{std::forward<Es>(es)...}; }
@@ -21,7 +8,6 @@ namespace zfq::_aggr {
 	constexpr auto view_impl(Type<C&>, Es&... es)
 	{ return Tuple<Es&...>{es...}; }
 
-	template<typename T> constexpr auto view(T&&, Const<0>) { return Tuple{}; }
 	template<typename T> constexpr auto view(T&& aggregate, Const<1>) {
 		auto& [_0] = aggregate;
 		return _aggr::view_impl<decltype(_0)>(type<T>, _0);
@@ -87,21 +73,3 @@ namespace zfq::_aggr {
 		return _aggr::view_impl<decltype(_0), decltype(_1), decltype(_2), decltype(_3), decltype(_4), decltype(_5), decltype(_6), decltype(_7), decltype(_8), decltype(_9), decltype(_10), decltype(_11), decltype(_12), decltype(_13), decltype(_14), decltype(_15)>(type<T>, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15);
 	}
 }
-namespace zfq {
-	template<typename T> concept Aggregatish =
-		!Tuplish<T> && std::is_aggregate_v<std::remove_reference_t<T>>;
-}
-namespace zfq::adl {
-	template<typename F, Aggregatish T>
-	constexpr decltype(auto) apply(Generic, F&& fn, T&& t)
-	{ return zfq::apply(fn, zfq::view(std::forward<T>(t))); }
-	template<Aggregatish T> constexpr auto size(Generic, T const&) {
-		auto size = _aggr::size<T>(std::make_index_sequence<16 + 1>{});
-		static_assert(decltype(size)::value <= 16, "aggregate too large");
-		return size;
-	}
-	template<Aggregatish T> constexpr auto view(Generic, T&& t)
-	{ return _aggr::view(std::forward<T>(t), zfq::size(t)); }
-}
-
-#endif
