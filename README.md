@@ -8,6 +8,37 @@ What we want is quick and pretty programs but they need to be built on top of mo
 
 The name `zfq` is `std` upside down, symbolizing a fresh reinterpretation of what a language extension library is.
 
+## Example
+
+```c++
+#include <zfq/aggr.hpp>
+
+using zfq::operator""_c;
+
+template<auto... ts> struct CTuple {
+	constexpr decltype(auto) apply(auto&& fn) const
+	{ return fn(zfq::const_<ts>...); }
+};
+
+struct Aggr { int i; float f; };
+
+auto constexpr meta_assert = [](auto t) { static_assert(decltype(t)::value); };
+auto constexpr sum = [](auto&& tuple)
+{ return tuple | zfq::expand | [](auto&&... ts) { return (0_c + ... + ts); }; };
+
+static_assert([] {
+	CTuple<1, 2, 3, 4> ct;
+	meta_assert(sum(ct) == 10_c);
+
+	zfq::Tuple mix(1, 2_c);
+	assert(mix[0_c] == 1);
+	meta_assert(mix[1_c] == 2_c);
+
+	Aggr rt{.i = 42, .f = 43};
+	return sum(rt) + sum(mix) == 42 + 43 + 1 + 2;
+}());
+```
+
 ## Features
 
 `zfq` aims at helping with fundamental C++ and STL problems:
@@ -36,16 +67,24 @@ To preserve its features, `zfq` has to give up some things:
 
 The whole `zfq` library and its git repository are freely distributed under the [GNU GPLv3 license](./LICENSE.md). To use `zfq`, download it and `#include` its [source code](./zfq/). To run tests, just build [the `.cpp` files](./test/).
 
-## Extension and integration
+## Extension
 
-**How it works:** The library introduces the idea of "tag multidispatching" - unless a member function implementation is found, all `zfq` CPOs ADL-search (based on the "top level" type of the "main" parameter) for the tag to be dispatched on, defaulting to the `zfq` tag. Afterwards, the tag is used as the first parameter in an unqualified function call.
+**How it works:** The library introduces the idea of "tag multidispatching" - unless a member function implementation is found, all `zfq` CPOs ADL-search (based on the "top level" type of their "main" parameter) for the tag to be dispatched on, defaulting to the `zfq` tag. Afterwards, an unqualified function call is performed with the first parameter being the tag found and wrapped in order to separate three logical overload sets:
+
+1. `zfq::adl::Specific<B>`, typically used for member overloads.
+
+2. The ADL-found tag, if any.
+
+3. The default `zfq::adl::Generic` tag.
+
+A less prioritized set is inspected only if the more prioritized one has no viable overloads.
 
 **How to use:** Say, there's a `zfq::foo(sth)` CPO which you want to extend for `yours::Sth`. Here are the options, from easiest to hardest:
 
-- To extend a class you control, overload `sth.foo()`.
+1. To extend a class you control, overload `sth.foo()`.
 
-- To extend an already defined class, overload `yours::foo(zfq::adl::Specific<B>, Sth)`.
+2. To extend an already defined class, overload `yours::foo(zfq::adl::Specific<B>, Sth)`.
 
-- To extend all classes from `yours`, overload `yours::adl::Generic yours::adl_tag(T const&)` and `yours::adl::foo(Generic, T)`.
+3. To extend all classes from `yours`, overload `yours::adl::Generic yours::adl_tag(T const&)` and `yours::adl::foo(Generic, T)`.
 
-- To extend all classes, overload `zfq::adl::foo(Generic, T)`.
+4. To extend all classes, overload `zfq::adl::foo(Generic, T)`.
