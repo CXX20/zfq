@@ -4,7 +4,7 @@ namespace {
 	using zfq::size;
 
 	static_assert([]<auto... is>(std::index_sequence<is...>) {
-		return zfq::apply([](auto...) { return true; }, zfq::Tuple{is...});
+		return size(zfq::Tuple{is...}).value == 22;
 	}(std::make_index_sequence<22>{}));
 
 	struct Empty {} empty;
@@ -50,14 +50,14 @@ namespace {
 	static_assert(std::is_same_v<
 			decltype(view(Tricky{42, 42})), zfq::Tuple<int const&, int&&, int&&>>);
 
-	using zfq::apply;
+	using zfq::expand;
 
-	static_assert(
-			!zfq::requires_(Empty{}, [](auto&& e) -> decltype(apply([] {}, e)) {}));
+	static_assert(!zfq::requires_(
+			Empty{}, [](auto&& e) -> decltype(e | expand | [] {}) {}));
 	static_assert(!decltype(zfq::requires_(
-			empty, [](auto&& e) -> decltype(apply([] {}, e)) {}))::value);
-	static_assert(apply([](auto _42) { return _42 == 42; }, One{42}));
-	static_assert(
-			apply([](auto... es) { return (... - es); }, Tricky{1, 2, 3}) ==
-			1 - 2 - 3);
+			empty, [](auto&& e) -> decltype(e | expand | [] {}) {}))::value);
+	static_assert(One{42} | expand | [](auto _42) { return _42 == 42; });
+	static_assert((
+		Tricky{1, 2, 3} | expand | [](auto... es) { return (... - es); }
+	) == 1 - 2 - 3);
 }

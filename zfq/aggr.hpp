@@ -27,7 +27,7 @@ namespace zfq {
 namespace zfq::adl {
 	template<typename F, Aggregatish T>
 	constexpr decltype(auto) apply(Generic, F&& fn, T&& t)
-	{ return zfq::apply(fn, zfq::view(std::forward<T>(t))); }
+	{ return std::forward<T>(t) | zfq::view | expand | fn; }
 	template<Aggregatish T> constexpr auto size(Generic, T const& t)
 	{ return _aggr::size(t); }
 	template<Aggregatish T> constexpr auto view(Generic, T&& t)

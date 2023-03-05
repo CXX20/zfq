@@ -63,7 +63,8 @@ namespace {
 	namespace my {
 		struct Wrapper: Tuple3 {};
 		static_assert([t = Wrapper{1, 2., 3u}] {
-			zfq::apply([](int, double, unsigned) {}, t);
+			zfq::expand(t) | [](int, double, unsigned) {};
+			t | zfq::expand | [](int, double, unsigned) {};
 			auto [_1, _2, _3] = t;
 			return
 				zfq::size(t).value == 3 && t == t && _1 == 1 && _2 == 2. && _3 == 3u;
