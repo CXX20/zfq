@@ -9,11 +9,8 @@ namespace zfq::_fn {
 	template<typename F> struct [[nodiscard]] Trail: private F {
 		constexpr Trail(F src): F{src} {}
 		Trail(Trail&&) = delete;
-		template<typename A> friend void operator|(A&&, Trail const&) = delete;
-		template<typename A> friend void operator|(A&&, Trail&) = delete;
-		template<typename A> friend void operator|(A&&, Trail const&&) = delete;
-		template<typename A> friend constexpr auto operator|(A&& arg, Trail&& self)
-		-> decltype(auto) { return self(std::forward<A>(arg)); }
+		template<typename A> friend constexpr auto operator|(A&& arg, Trail&& me)
+		-> decltype(me(std::forward<A>(arg))) { return me(std::forward<A>(arg)); }
 	};
 
 	template<auto t> struct Hide: Decltype<t> {};
@@ -27,11 +24,14 @@ namespace zfq {
 		using F::operator();
 		template<typename... As> constexpr auto operator()(As&&... tail) const
 		requires (!std::invocable<F, As...> && sizeof...(As) < n) {
-			return _fn::Trail{[&, this]<typename A>(A&& a) -> decltype(auto)
-			{ return F::operator()(std::forward<A>(a), std::forward<As>(tail)...); }};
+			F const& self = *this;
+			return _fn::Trail{[&]<typename A>(A&& arg)
+			-> decltype(self(std::forward<A>(arg), std::forward<As>(tail)...))
+			{ return self(std::forward<A>(arg), std::forward<As>(tail)...); }};
 		}
 		template<typename A> friend constexpr auto operator|(A&& arg, Pipe self)
-		-> decltype(auto) { return self.F::operator()(std::forward<A>(arg)); }
+		-> decltype(self.F::operator()(std::forward<A>(arg)))
+		{ return self.F::operator()(std::forward<A>(arg)); }
 	};
 	template<typename F, typename N> Pipe(F, N) -> Pipe<F, N::value>;
 	template<auto f, auto n> using Cpo = Pipe<decltype(f), n>;
