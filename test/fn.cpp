@@ -70,26 +70,28 @@ namespace { namespace mix {
 	struct Unaware {};
 	struct Untouched {};
 	namespace adl {
-		struct Tag {};
-		constexpr auto customize(Tag, Unaware) { return 12_c; }
+		struct Generic {};
+		constexpr auto customize(Generic, Unaware) { return 12_c; }
 	}
-	template<typename T> constexpr adl::Tag adl_tag(T const&) { return {}; }
+	template<typename T> constexpr adl::Generic adl_tag(T const&) { return {}; }
 } }
 namespace { namespace lib1 {
 	template<typename...> struct Conflict {};
 	namespace adl {
-		struct Tag {};
-		template<typename T> constexpr auto customize(Tag, T const&) { return 1_c; }
+		struct Generic {};
+		template<typename T> constexpr auto customize(Generic, T const&)
+		{ return 1_c; }
 	}
-	template<typename T> constexpr adl::Tag adl_tag(T const&) { return {}; }
+	template<typename T> constexpr adl::Generic adl_tag(T const&) { return {}; }
 } }
 namespace { namespace lib2 {
 	template<typename...> struct Conflict {};
 	namespace adl {
-		struct Tag {};
-		template<typename T> constexpr auto customize(Tag, T const&) { return 2_c; }
+		struct Generic {};
+		template<typename T> constexpr auto customize(Generic, T const&)
+		{ return 2_c; }
 	}
-	template<typename T> constexpr adl::Tag adl_tag(T const&) { return {}; }
+	template<typename T> constexpr adl::Generic adl_tag(T const&) { return {}; }
 } }
 namespace {
 	using zfq::adl::tag_for;
@@ -99,10 +101,10 @@ namespace {
 	auto constexpr tagless = [](auto&& t) { return !requires { tag_for(t); }; };
 
 	static_assert(tagged<42_c, zfq::adl::Generic>);
-	static_assert(tagged<mix::Unaware{}, mix::adl::Tag>);
-	static_assert(tagged<mix::Untouched{}, mix::adl::Tag>);
-	static_assert(tagged<lib1::Conflict<mix::Unaware>{}, lib1::adl::Tag>);
-	static_assert(tagged<lib2::Conflict<mix::Unaware>{}, lib2::adl::Tag>);
+	static_assert(tagged<mix::Unaware{}, mix::adl::Generic>);
+	static_assert(tagged<mix::Untouched{}, mix::adl::Generic>);
+	static_assert(tagged<lib1::Conflict<mix::Unaware>{}, lib1::adl::Generic>);
+	static_assert(tagged<lib2::Conflict<mix::Unaware>{}, lib2::adl::Generic>);
 	static_assert(tagless(42));
 	static_assert(tagless(ext::Unaware{}));
 
@@ -133,11 +135,12 @@ namespace { namespace mixx {
 	struct Base {};
 	struct Derived: Base {};
 	namespace adl {
-		struct Tag {};
-		template<typename... As> constexpr auto override_(Tag, Base const&, As&&...)
+		struct Generic {};
+		template<typename... As>
+		constexpr auto override_(Generic, Base const&, As&&...)
 		{ return zfq::true_; }
 	}
-	template<typename T> constexpr adl::Tag adl_tag(T const&) { return {}; }
+	template<typename T> constexpr adl::Generic adl_tag(T const&) { return {}; }
 } }
 namespace {
 	static_assert(!zfq::override_(42));
