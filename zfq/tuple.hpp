@@ -91,9 +91,10 @@ namespace zfq::adl {
 	}
 }
 namespace std {
-	template<zfq::_tuple::ZfqTuplish T> struct tuple_size<T>
-	{ static auto constexpr value = decltype(declval<T>().size())::value; };
-	template<auto i, zfq::_tuple::ZfqTuplish T> struct tuple_element<i, T>
+	template<typename T> requires zfq::_tuple::ZfqTuplish<T> struct tuple_size<T>
+	: integral_constant<size_t, decltype(declval<T>().size())::value> {};
+	template<size_t i, typename T> requires zfq::_tuple::ZfqTuplish<T>
+	struct tuple_element<i, T>
 	{ using type = zfq::Decltype<T::typeof(zfq::const_<i>)>; };
 }
 

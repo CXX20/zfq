@@ -10,7 +10,8 @@ namespace zfq::_fn {
 		constexpr Trail(F src): F{src} {}
 		Trail(Trail&&) = delete;
 		template<typename A> friend constexpr auto operator|(A&& arg, Trail&& me)
-		-> decltype(me(std::forward<A>(arg))) { return me(std::forward<A>(arg)); }
+		-> decltype(std::declval<F const&>()(std::forward<A>(arg)))
+		{ return me(std::forward<A>(arg)); }
 	};
 
 	template<auto t> struct Hide: Decltype<t> {};
@@ -30,7 +31,7 @@ namespace zfq {
 			{ return self(std::forward<A>(arg), std::forward<As>(tail)...); }};
 		}
 		template<typename A> friend constexpr auto operator|(A&& arg, Pipe self)
-		-> decltype(self.F::operator()(std::forward<A>(arg)))
+		-> decltype(std::declval<F const&>()(std::forward<A>(arg)))
 		{ return self.F::operator()(std::forward<A>(arg)); }
 	};
 	template<typename F, typename N> Pipe(F, N) -> Pipe<F, N::value>;

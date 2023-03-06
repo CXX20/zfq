@@ -14,7 +14,7 @@ namespace zfq::_aggr {
 	}
 	template<typename T> constexpr auto size(T const&) {
 		auto constexpr n = _aggr::size<T>(std::make_index_sequence<16 + 1>{});
-		static_assert(n <= 16, "aggregate too large");
+		static_assert(n.value <= 16, "aggregate too large");
 		return n;
 	}
 }
