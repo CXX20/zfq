@@ -30,7 +30,7 @@ static_assert([] {
 	CTuple<1, 2, 3, 4> ct;
 	meta_assert(sum(ct) == 10_c);
 
-	zfq::Tuple mix(1, 2_c);
+	zfq::Tuple mix{1, 2_c};
 	assert(mix[0_c] == 1);
 	meta_assert(mix[1_c] == 2_c);
 
@@ -49,7 +49,7 @@ static_assert([] {
 
 - Pack expansion statements like `template<typename... Ts> struct Foo { Ts... ts; }` are not allowed. `std::tuple` tries to aid but it's slow due to recursion and constructor argument moves instead of in-place member initialization. Solution: [aggregate tuple](./zfq/tuple.hpp).
 
-- Memberwise looping/indexing is not allowed even for aggregate types. Solution: [aggregate-to-tuple hack](./zfq/aggregate.hpp);
+- Memberwise looping/indexing is not allowed even for aggregate types. Solution: [aggregate-to-tuple hack](./zfq/aggr.hpp);
 
 ## Limitations
 
