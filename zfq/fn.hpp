@@ -1,7 +1,6 @@
 #ifndef ZFQ_HEADER_FN
 #define ZFQ_HEADER_FN
 
-#include <cassert>
 #include <utility>
 #include "type.hpp"
 

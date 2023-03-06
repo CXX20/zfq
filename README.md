@@ -11,6 +11,7 @@ The name `zfq` is `std` upside down, symbolizing a fresh reinterpretation of wha
 ## Example
 
 ```c++
+#include <cassert>
 #include <zfq/aggr.hpp>
 
 using zfq::operator""_c;
