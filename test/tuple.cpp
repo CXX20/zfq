@@ -47,13 +47,13 @@ namespace {
 	static_assert(Correct<Tuple<int const&&>, int const&, int const&&>);
 	static_assert(Correct<Tuple<int const&&> const, int const&, int const&&>);
 
-	using zfq::Tuplish;
+	using zfq::TupleLike;
 
 	struct Tuple0 { constexpr auto size() { return 0_c; } };
-	static_assert(Tuplish<Tuple3>);
-	static_assert(!Tuplish<Tuple0>);
-	static_assert(!Tuplish<int>);
-	static_assert(!Tuplish<zfq::Const<42>>);
+	static_assert(TupleLike<Tuple0>);
+	static_assert(TupleLike<Tuple3>);
+	static_assert(!TupleLike<int>);
+	static_assert(!TupleLike<zfq::Const<42>>);
 	
 	static_assert([t = Tuple{1, 2., 3u}] {
 		auto& [_1, _2, _3] = t;

@@ -17,20 +17,21 @@ namespace zfq::_aggr {
 		static_assert(n.value <= 16, "aggregate too large");
 		return n;
 	}
-}
-namespace zfq {
-	template<typename T> concept Aggregatish =
-		!Tuplish<T> &&
+	template<typename T> concept Alike =
 		std::is_aggregate_v<std::remove_reference_t<T>> &&
+		!requires { std::tuple_size<std::remove_reference_t<T>>::value; } &&
 		requires(T t) { requires !!decltype(_aggr::size(t))::value; };
 }
+namespace zfq {
+	template<typename T> concept AggrLike = TupleLike<T> && _aggr::Alike<T>;
+}
 namespace zfq::adl {
-	template<typename F, Aggregatish T>
+	template<typename F, AggrLike T>
 	constexpr decltype(auto) apply(Generic, F&& fn, T&& t)
 	{ return std::forward<T>(t) | zfq::view | expand | fn; }
-	template<Aggregatish T> constexpr auto size(Generic, T const& t)
+	template<_aggr::Alike T> constexpr auto size(Generic, T const& t)
 	{ return _aggr::size(t); }
-	template<Aggregatish T> constexpr auto view(Generic, T&& t)
+	template<AggrLike T> constexpr auto view(Generic, T&& t)
 	{ return _aggr::view(std::forward<T>(t), zfq::size(t)); }
 }
 
